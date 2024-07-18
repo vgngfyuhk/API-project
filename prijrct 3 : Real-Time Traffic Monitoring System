@@ -1,0 +1,70 @@
+import heapq
+
+# Sample graph data representing a city's road network
+graph = {
+    'A': {'B': 1, 'C': 4},
+    'B': {'A': 1, 'C': 2, 'D': 5},
+    'C': {'A': 4, 'B': 2, 'D': 1},
+    'D': {'B': 5, 'C': 1}
+}
+
+# Sample real-time traffic data (congestion levels)
+traffic_data = {
+    'A': {'B': 2, 'C': 4},
+    'B': {'A': 2, 'C': 3, 'D': 5},
+    'C': {'A': 4, 'B': 3, 'D': 1},
+    'D': {'B': 5, 'C': 1}
+}
+
+def fetch_real_time_traffic_data():
+    # In a real scenario, this function would fetch data from an API
+    # For simulation, we return the sample traffic data
+    return traffic_data
+
+def process_traffic_data(graph, traffic_data):
+    # Adjust graph weights based on real-time traffic data
+    for node in graph:
+        for neighbor in graph[node]:
+            graph[node][neighbor] += traffic_data[node][neighbor]
+    return graph
+
+def dijkstra(graph, start, end):
+    queue = [(0, start, [])]
+    seen = set()
+    mins = {start: 0}
+    
+    while queue:
+        (cost, node, path) = heapq.heappop(queue)
+        
+        if node in seen:
+            continue
+        
+        seen.add(node)
+        path = path + [node]
+        
+        if node == end:
+            return (cost, path)
+        
+        for neighbor, weight in graph[node].items():
+            if neighbor in seen:
+                continue
+            prev = mins.get(neighbor, None)
+            next_cost = cost + weight
+            if prev is None or next_cost < prev:
+                mins[neighbor] = next_cost
+                heapq.heappush(queue, (next_cost, neighbor, path))
+    
+    return (float("inf"), [])
+
+def suggest_alternative_routes(graph, start, end):
+    processed_graph = process_traffic_data(graph.copy(), fetch_real_time_traffic_data())
+    cost, route = dijkstra(processed_graph, start, end)
+    return cost, route
+
+# Example usage
+start_point = 'A'
+end_point = 'D'
+
+cost, route = suggest_alternative_routes(graph, start_point, end_point)
+
+print(f"Suggested Route from {start_point} to {end_point}: {route} with cost {cost}")
