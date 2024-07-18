@@ -1,0 +1,76 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from statsmodels.tsa.holtwinters import ExponentialSmoothing
+
+# Sample data
+data = {
+    'month': pd.date_range(start='2020-01-01', periods=24, freq='M'),
+    'sales': [100, 110, 105, 115, 130, 125, 140, 135, 145, 150, 160, 155, 
+              165, 170, 175, 180, 185, 190, 195, 200, 210, 215, 220, 225]
+}
+df = pd.DataFrame(data)
+df.set_index('month', inplace=True)
+
+def demand_forecasting(df):
+    model = ExponentialSmoothing(df['sales'], trend='add', seasonal='add', seasonal_periods=12)
+    fit = model.fit()
+    df['forecast'] = fit.predict(start=df.index[0], end=df.index[-1])
+    return df
+
+def calculate_safety_stock(std_dev, lead_time, service_level):
+    z_score = 1.65  # Z-score for 95% service level
+    safety_stock = z_score * std_dev * np.sqrt(lead_time)
+    return safety_stock
+
+def calculate_reorder_point(avg_demand, lead_time, safety_stock):
+    reorder_point = avg_demand * lead_time + safety_stock
+    return reorder_point
+
+def calculate_eoq(ordering_cost, holding_cost, annual_demand):
+    eoq = np.sqrt((2 * ordering_cost * annual_demand) / holding_cost)
+    return eoq
+
+# Run forecasting
+df = demand_forecasting(df)
+
+# Plotting the forecast
+plt.figure(figsize=(12, 6))
+plt.plot(df['sales'], label='Actual Sales')
+plt.plot(df['forecast'], label='Forecasted Sales', linestyle='--')
+plt.title('Sales Forecast')
+plt.xlabel('Month')
+plt.ylabel('Sales')
+plt.legend()
+plt.show()
+
+# Parameters
+lead_time = 2  # in months
+service_level = 0.95  # 95% service level
+ordering_cost = 50  # cost per order
+holding_cost = 2  # holding cost per unit per month
+
+# Calculations
+std_dev = np.std(df['sales'])  # standard deviation of sales
+avg_demand = np.mean(df['sales'])
+annual_demand = avg_demand * 12
+
+safety_stock = calculate_safety_stock(std_dev, lead_time, service_level)
+reorder_point = calculate_reorder_point(avg_demand, lead_time, safety_stock)
+eoq = calculate_eoq(ordering_cost, holding_cost, annual_demand)
+
+# Display results
+print(f"Safety Stock: {safety_stock:.2f} units")
+print(f"Reorder Point: {reorder_point:.2f} units")
+print(f"Economic Order Quantity (EOQ): {eoq:.2f} units")
+
+# Summary
+summary = {
+    'Average Monthly Demand': avg_demand,
+    'Safety Stock': safety_stock,
+    'Reorder Point': reorder_point,
+    'EOQ': eoq
+}
+
+summary_df = pd.DataFrame.from_dict(summary, orient='index', columns=['Value'])
+print(summary_df)
